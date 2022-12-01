@@ -49,12 +49,14 @@ async def postResults(data: LeaderboardInfo):
     #print(resultOne) used to see ouput
 
     result = redisClient.zadd(leaderboardData, {leaderboardData["username"]: leaderboardData["score"]})
-    if result == 0:
-        return "Username exist -- Updating Score.\nGame Status-Score\n" + ('\n'.join(map(str, resultOne))), 200
-    elif result != int:
-        return {"Error:" "Something went wrong."}, 404
-    else:
-        return "Adding new username and score.\nGame Status-Score\n" + ('\n'.join(map(str, resultOne))), 200
+    resultOne = redisClient.zrange(leaderboardSet, 0, -1, desc = True, withscores = True, score_cast_func=int)
+    #if result == 0:
+    #    return "Username exist -- Updating Score.\nGame Status-Score\n" + ('\n'.join(map(str, resultOne))), 200
+    #elif result != int:
+    #    return {"Error:" "Something went wrong."}, 404
+    #else:
+    #    return "Adding new username and score.\nGame Status-Score\n" + ('\n'.join(map(str, resultOne))), 200
+    test = redisCommand(leaderboardSet, "zadd ")
 
 
 # top 10 scores endpoint
