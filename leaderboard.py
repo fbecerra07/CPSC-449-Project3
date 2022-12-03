@@ -4,9 +4,7 @@ import dataclasses
 import textwrap
 import redis
 
-import databases
-import sqlite3
-import toml
+import hiredis 
 
 # Necessary quart imports
 from quart import Quart, g, request, abort
@@ -15,23 +13,11 @@ from quart_schema import QuartSchema, RequestSchemaValidationError, validate_req
 app = Quart(__name__)
 QuartSchema(app)
 
-app.config.form_file(f"./etc/game.toml", toml.load)
-
-async def _connect_db():
-    database = databses.Databse(app.config["DATABASES"]["URL"])
-    await database.conntect()
-    return database
-
-def _get_db():
-    if not hasattr(g, "sqlite_db"):
-        g.sqlite_db = connect_db()
-    return g.sqlite_db
-
 # Initialize redis client
-redisClient = redis.StrictRedis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True)
+redisClient = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
 
 # delete everything in the redis client for testing
-#redisClient.flushall()
+redisClient.flushall()
 
 # Create a data class to assist with API data
 @dataclasses.dataclass
@@ -52,30 +38,28 @@ async def postResults(data: LeaderboardInfo):
     @return: 200 if successful
     Potential: May return 401 if data does not match the LeaderboardInfo dataclass template
     """
-    redisClient.zadd(leaderboardSet, {'user1': 25, 'user2': 11, 'user3': 20, 'user4': 16, 'user5': 19, 'user6': 43, 'user7': 5, 'user8': 37, 'user9': 8, 'user10': 47,
-                                     'user11': 30, 'user12': 1, 'user13': 22, 'user14': 50, 'user15': 35, 'user16': 21, 'user17': 9, 'user18': 27, 'user19': 13, 'user20': 7})
 
     # Create sorted set
     leaderboardSet = "Leaderboard"
     leaderboardData = dataclasses.asdict(data)
-    
+
+    # Initializing redis with members and values
+    redisClient.zadd(leaderboardSet, {'Won in 1 guess': 25, 'Won in 2 guesses': 11, 'Won in 3 guesses': 20, 'Won in 4 guesses': 16, 'Won in 5 guesses': 19, 'Won in 6 guesses': 43, 'Lost': 10})
+
     #if result = 1 then dataset that is added is new
     #if result = 0 then dataset wasn't added because duplicate 
-    result = redisClient.zadd(leaderboardData, {leaderboardData["username"]: leaderboardData["score"]})
-    print(result) #used to see output
+    result = redisClient.zadd(leaderboardSet, {leaderboardData["username"]: leaderboardData["score"]})
     resultOne = redisClient.zrange(leaderboardSet, 0, -1, desc = True, withscores = True, score_cast_func=int)
-    print(resultOne) #used to see ouput
+
     if result == 0:
-        return "Username exist -- Updating Score.\nGame Status-Score\n" + ('\n'.join(map(str, resultOne))), 200
+        return dict(resultOne), 200
     elif result != int:
         return {"Error:" "Something went wrong."}, 404
-    else:
-        return "Adding new username and score.\nGame Status-Score\n" + ('\n'.join(map(str, resultOne))), 200
 
 
 # top 10 scores endpoint
 @app.route("/top-scores/", methods=["GET"])
-async def topScores(data: LeaderboardInfo):
+async def topScores():
     """
     this function is responsible for retrieving the top 10 scores from the database
 
