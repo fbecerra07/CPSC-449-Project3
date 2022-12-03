@@ -39,12 +39,10 @@ async def postResults(data: LeaderboardInfo):
     leaderboardData = dataclasses.asdict(data)
 
     # Initializing redis with members and values
-    #redisClient.zadd(leaderboardSet, {'Won in 1 guess': 25, 'Won in 2 guesses': 11, 'Won in 3 guesses': 20, 'Won in 4 guesses': 16, 'Won in 5 guesses': 19, 'Won in 6 guesses': 43, 'Lost': 10})
 
     #if result = 1 then dataset that is added is new
     #if result = 0 then dataset wasn't added because duplicate 
     result = redisClient.zadd(leaderboardSet, {leaderboardData["username"]: leaderboardData["score"]})
-    #resultOne = redisClient.zrange(leaderboardSet, 0, -1, desc = True, withscores = True, score_cast_func=int)
 
     if result == 1:
         return {leaderboardData["username"]: leaderboardData["score"]}, 200
@@ -72,7 +70,6 @@ async def topScores():
     # Does the database have any data?
     if topScores != None:
         # If so, retrieve
-        #data = dataclasses.asdict(topScores)
         return dict(topScores), 200
     else:
         # Should equal nil, or None, so return a message
